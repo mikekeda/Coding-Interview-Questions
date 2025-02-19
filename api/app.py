@@ -4,7 +4,10 @@ from sanic import Sanic
 from sanic.response import json
 from sanic_cors import CORS
 
+from api.settings import SANIC_CONFIG
+
 app = Sanic("CodingInterviewQuestionsApp")
+app.config.update(SANIC_CONFIG)
 CORS(app)  # enable CORS so our React app can call the API
 
 DATABASE = "problems.db"

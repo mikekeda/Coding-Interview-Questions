@@ -44,6 +44,12 @@ const difficultyColorMap = {
 
 const limit = 20; // items per page
 
+const protocol = window.location.protocol;
+const hostname = window.location.hostname;
+const baseUrl = hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : `${protocol}//${hostname}`;
+
 function ProblemsPage() {
   // 1) MAIN PROBLEMS + LOADING
   const [problems, setProblems] = useState([]);
@@ -87,14 +93,14 @@ function ProblemsPage() {
   // B) FETCH DISTINCT COMPANIES, DATA STRUCTURES
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    fetch('http://localhost:8000/companies')
+    fetch(`${baseUrl}/companies`)
       .then(response => response.json())
       .then(data => setCompanies(data))
       .catch(err => console.error('Error fetching companies:', err));
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:8000/data_structures')
+    fetch(`${baseUrl}/data_structures`)
       .then(response => response.json())
       .then(data => setDataStructures(data))
       .catch(err => console.error('Error fetching data structures:', err));
@@ -119,7 +125,7 @@ function ProblemsPage() {
       params.append('data_structure', filterDataStructure);
     }
 
-    fetch(`http://localhost:8000/problems?${params.toString()}`)
+    fetch(`${baseUrl}/problems?${params.toString()}`)
       .then(response => response.json())
       .then(data => {
         // data = { problems: [...], total: number }
