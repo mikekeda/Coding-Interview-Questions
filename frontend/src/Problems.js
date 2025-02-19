@@ -93,14 +93,14 @@ function ProblemsPage() {
   // B) FETCH DISTINCT COMPANIES, DATA STRUCTURES
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    fetch(`${baseUrl}/companies`)
+    fetch(`${baseUrl}/api/companies`)
       .then(response => response.json())
       .then(data => setCompanies(data))
       .catch(err => console.error('Error fetching companies:', err));
   }, []);
 
   useEffect(() => {
-    fetch(`${baseUrl}/data_structures`)
+    fetch(`${baseUrl}/api/data_structures`)
       .then(response => response.json())
       .then(data => setDataStructures(data))
       .catch(err => console.error('Error fetching data structures:', err));
@@ -125,7 +125,7 @@ function ProblemsPage() {
       params.append('data_structure', filterDataStructure);
     }
 
-    fetch(`${baseUrl}/problems?${params.toString()}`)
+    fetch(`${baseUrl}/api/problems?${params.toString()}`)
       .then(response => response.json())
       .then(data => {
         // data = { problems: [...], total: number }

@@ -30,7 +30,7 @@ def decode_fields(problem):
     return problem
 
 
-@app.get('/companies')
+@app.get('/api/companies')
 async def list_companies(request):
     companies = []
     async with aiosqlite.connect(DATABASE) as db:
@@ -44,7 +44,7 @@ async def list_companies(request):
     return json(companies)
 
 
-@app.get('/data_structures')
+@app.get('/api/data_structures')
 async def list_data_structures(request):
     ds_set = set()
     async with aiosqlite.connect(DATABASE) as db:
@@ -64,7 +64,7 @@ async def list_data_structures(request):
     return json(data_structures)
 
 
-@app.get('/problems')
+@app.get('/api/problems')
 async def list_problems(request):
     query = "SELECT * FROM problems WHERE 1=1"
     count_query = "SELECT COUNT(*) as total FROM problems WHERE 1=1"
@@ -124,7 +124,7 @@ async def list_problems(request):
     })
 
 
-@app.get('/problems/<problem_id:int>')
+@app.get('/api/problems/<problem_id:int>')
 async def get_problem(request, problem_id):
     async with aiosqlite.connect(DATABASE) as db:
         db.row_factory = aiosqlite.Row
