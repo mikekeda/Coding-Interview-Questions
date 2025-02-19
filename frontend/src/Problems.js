@@ -42,7 +42,7 @@ const difficultyColorMap = {
   Hard: 'error'
 };
 
-const limit = 20; // items per page
+const limit = 10; // items per page
 
 const protocol = window.location.protocol;
 const hostname = window.location.hostname;
@@ -124,6 +124,9 @@ function ProblemsPage() {
     if (filterDataStructure) {
       params.append('data_structure', filterDataStructure);
     }
+    if (searchTerm) {
+      params.append('search', searchTerm);
+    }
 
     fetch(`${baseUrl}/api/problems?${params.toString()}`)
       .then(response => response.json())
@@ -139,14 +142,7 @@ function ProblemsPage() {
       })
       .catch(err => console.error('Error fetching problems:', err))
       .finally(() => setLoading(false));
-  }, [filterCompany, filterDifficulty, filterDataStructure, page]);
-
-  // ---------------------------------------------------------------------------
-  // D) LOCAL TITLE SEARCH (applies to whichever 20 problems we currently have)
-  // ---------------------------------------------------------------------------
-  const filteredProblems = problems.filter(problem =>
-    problem.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  }, [filterCompany, filterDifficulty, filterDataStructure, searchTerm, page]);
 
   // ---------------------------------------------------------------------------
   // E) HANDLERS
@@ -271,11 +267,11 @@ function ProblemsPage() {
                 <Box sx={{ textAlign: 'center', my: 4 }}>
                   <CircularProgress />
                 </Box>
-              ) : filteredProblems.length === 0 ? (
+              ) : problems.length === 0 ? (
                 <Typography variant="body1">No problems match your search/filters.</Typography>
               ) : (
                 <List dense>
-                  {filteredProblems.map(problem => {
+                  {problems.map(problem => {
                     const { solved, bookmarked } = getStatus(problem.id);
                     return (
                       <ListItem key={problem.id} disablePadding>
@@ -332,7 +328,7 @@ function ProblemsPage() {
                 </List>
               )}
 
-              {!loading && filteredProblems.length > 0 && (
+              {!loading && problems.length > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                   <Pagination
                     count={totalPages}

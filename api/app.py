@@ -87,6 +87,16 @@ async def list_problems(request):
         parameters.append(difficulty)
         count_parameters.append(difficulty)
 
+    # Searching by title (for example)
+    search = request.args.get('search')
+    if search:
+        # Use LIKE to match any substring
+        query += " AND title LIKE ?"
+        count_query += " AND title LIKE ?"
+        like_value = f"%{search}%"
+        parameters.append(like_value)
+        count_parameters.append(like_value)
+
     # Filtering by data_structure
     data_structure = request.args.get('data_structure')
     if data_structure:
