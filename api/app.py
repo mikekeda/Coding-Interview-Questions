@@ -106,6 +106,15 @@ async def list_problems(request):
         parameters.append(like_value)
         count_parameters.append(like_value)
 
+    # Sorting
+    sort_order = request.args.get('sort_order', 'asc').lower()
+    if sort_order not in {'asc', 'desc'}:
+        sort_order = 'asc'  # default/fallback
+
+    # We'll do ORDER BY id [asc/desc]
+    query += f" ORDER BY id {sort_order}"
+    count_query += ""  # Typically we don't need an order for the count query
+
     # Pagination
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))

@@ -25,6 +25,8 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 // For Python syntax highlighting
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -73,6 +75,8 @@ function ProblemsPage() {
   // 5) MARK AS SOLVED / BOOKMARKS (Local)
   // problemStatus = { [problemId]: { solved: bool, bookmarked: bool } }
   const [problemStatus, setProblemStatus] = useState({});
+
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // ---------------------------------------------------------------------------
   // A) LOAD PREFERENCES FROM LOCALSTORAGE ON MOUNT (solved/bookmarked)
@@ -128,6 +132,8 @@ function ProblemsPage() {
       params.append('search', searchTerm);
     }
 
+    params.append('sort_order', sortOrder);
+
     fetch(`${baseUrl}/api/problems?${params.toString()}`)
       .then(response => response.json())
       .then(data => {
@@ -142,7 +148,7 @@ function ProblemsPage() {
       })
       .catch(err => console.error('Error fetching problems:', err))
       .finally(() => setLoading(false));
-  }, [filterCompany, filterDifficulty, filterDataStructure, searchTerm, page]);
+  }, [filterCompany, filterDifficulty, filterDataStructure, searchTerm, sortOrder, page]);
 
   // ---------------------------------------------------------------------------
   // E) HANDLERS
@@ -259,8 +265,14 @@ function ProblemsPage() {
         <Grid item xs={12} md={4}>
           <Paper elevation={3}>
             <Box sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
                 Problem List
+                <IconButton
+                  onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                  sx={{ ml: 1 }}
+                >
+                  {sortOrder === 'asc' ? <ArrowDownwardIcon /> : <ArrowUpwardIcon />}
+                </IconButton>
               </Typography>
 
               {loading ? (
