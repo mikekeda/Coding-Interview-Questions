@@ -32,3 +32,17 @@ SANIC_CONFIG = {
     "DEBUG": bool(get_env_var("DEBUG", "True")),
     "SOCKET_FILE": get_env_var("SOCKET_FILE", "/temp/site.sock"),
 }
+
+EMAIL = get_env_var("EMAIL")
+EMAIL_PASSWORD = get_env_var("PASSWORD")
+OPENAI_API_KEY = get_env_var("OPENAI_API_KEY")
+
+DATABASE = "problems.db"
+
+# CELERY STUFF
+CELERY_BROKER_URL = "redis://localhost:6379/17"
+CELERY_result_backend = "redis://localhost:6379/17"
+CELERY_accept_content = ["application/json"]
+CELERY_task_serializer = "json"
+CELERY_result_serializer = "json"
+CELERY_timezone = "UTC"
