@@ -10,7 +10,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 import sqlite3
 
-from api.celery_config import app
+from api.celery_app import app
 from api.settings import DATABASE, EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY
 
 SYSTEM_PROMPT = """
