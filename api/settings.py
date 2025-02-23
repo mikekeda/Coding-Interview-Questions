@@ -40,8 +40,8 @@ OPENAI_API_KEY = get_env_var("OPENAI_API_KEY")
 DATABASE = "problems.db"
 
 # CELERY STUFF
-CELERY_BROKER_URL = "redis://localhost:6379/17"
-CELERY_result_backend = "redis://localhost:6379/17"
+CELERY_BROKER_URL = "redis://localhost:6379/10"
+CELERY_result_backend = "redis://localhost:6379/10"
 CELERY_accept_content = ["application/json"]
 CELERY_task_serializer = "json"
 CELERY_result_serializer = "json"
