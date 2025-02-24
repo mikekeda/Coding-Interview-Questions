@@ -34,7 +34,7 @@ SANIC_CONFIG = {
 }
 
 EMAIL = get_env_var("EMAIL")
-EMAIL_PASSWORD = get_env_var("PASSWORD")
+EMAIL_PASSWORD = get_env_var("EMAIL_PASSWORD")
 OPENAI_API_KEY = get_env_var("OPENAI_API_KEY")
 
 DATABASE = "problems.db"
