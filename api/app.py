@@ -157,10 +157,7 @@ async def get_problem(request, problem_id):
 
 @app.get("/sitemap.xml")
 async def sitemap_xml(request):
-    # Decide your domain (could be from config or environment)
-    scheme = request.scheme
-    host = request.host  # "example.com" or "localhost:8000"
-    domain = f"{scheme}://{host}"
+    domain = f"https://{request.host}"
 
     # 1) Basic static pages
     url_entries = [
