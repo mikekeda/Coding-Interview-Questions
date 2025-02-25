@@ -13,14 +13,14 @@ function ProblemDetail({ problem, handleCompanyClick, handleDataStructureClick }
   return (
     <Box>
       <Helmet>
-        <title>Coding Interview Prep</title>
+        <title>{`${problem.title} - Coding Interview Prep`}</title>
+        <meta
+          name="description"
+          content={`Practice solving: ${problem.title}. Enhance your coding interview skills with curated hints, solutions, and data-structure insights.`}
+        />
       </Helmet>
       <Typography variant="h5" gutterBottom>
-        <title>{`${problem.title} - Coding Interview Prep`}</title>
-          <meta
-            name="description"
-            content={`Practice solving: ${problem.title}. Enhance your coding interview skills with curated hints, solutions, and data-structure insights.`}
-          />
+        {problem.id}. {problem.title}
       </Typography>
       <Typography variant="subtitle1" gutterBottom>
         {problem.problem}
@@ -65,7 +65,7 @@ function ProblemDetail({ problem, handleCompanyClick, handleDataStructureClick }
       <Box sx={{ mt: 3 }}>
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography>Show Solution</Typography>
+            <Typography>Show AI-generated Solution</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box>
