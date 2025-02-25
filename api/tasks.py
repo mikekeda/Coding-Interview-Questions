@@ -86,7 +86,6 @@ def classify_problem(client: OpenAI, problem: str) -> Problem:
     # OPENAI_API_KEY should be set in your environment variables
     # list of models: https://platform.openai.com/docs/models
     # usage is here: https://platform.openai.com/settings/organization/usage
-    # api keys are here: https://platform.openai.com/settings/proj_5BJ3iBGoGjTFldhWcTdmDz8g/api-keys
     # price: https://openai.com/api/pricing/
     completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini",

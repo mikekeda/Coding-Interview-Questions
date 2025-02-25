@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Container, Toolbar, Typography, Box, Switch, FormControlLabel } from '@mui/material';
+import { AppBar, CssBaseline, Container, Toolbar, Typography, Box, Switch, FormControlLabel } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 // React Router imports
 import { Routes, Route, Link } from 'react-router-dom';
 
-import About from './About';  // The About page you just created
-import ProblemsPage from './Problems'; // import the new page
+import About from './pages/AboutPage';
+import ProblemsPage from './pages/ProblemsPage';
 
 // Light theme
 const lightTheme = createTheme({
@@ -59,6 +59,7 @@ function App() {
 
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+      <CssBaseline /> {/* resets default margins/padding */}
       <Box sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
 
         {/* Top App Bar with Dark Mode Toggle */}
@@ -91,6 +92,8 @@ function App() {
                 <ProblemsPage />
               }
             />
+
+            <Route path="/problems/:problemId?" element={<ProblemsPage />} />
 
             {/* The new About page */}
             <Route path="/about" element={<About />} />

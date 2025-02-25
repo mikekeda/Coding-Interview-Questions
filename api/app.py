@@ -1,7 +1,7 @@
 import json as jsonlib  # to avoid confusion with sanic.response.json
 import aiosqlite
 from sanic import Sanic
-from sanic.response import json
+from sanic.response import json, text
 from sanic_cors import CORS
 
 from api.settings import DATABASE, SANIC_CONFIG
@@ -153,6 +153,51 @@ async def get_problem(request, problem_id):
             return json({"error": "Problem not found"}, status=404)
         problem = dict(row)
         return json(decode_fields(problem))
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml(request):
+    # Decide your domain (could be from config or environment)
+    scheme = request.scheme
+    host = request.host  # "example.com" or "localhost:8000"
+    domain = f"{scheme}://{host}"
+
+    # 1) Basic static pages
+    url_entries = [
+        f"""
+        <url>
+            <loc>{domain}/</loc>
+            <priority>1.0</priority>
+        </url>
+        <url>
+            <loc>{domain}/about</loc>
+            <priority>0.8</priority>
+        </url>
+        """
+    ]
+
+    # 2) Query all problem IDs
+    async with aiosqlite.connect(DATABASE) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT id FROM problems")
+        rows = await cursor.fetchall()
+
+    for row in rows:
+        problem_id = row["id"]
+        url_entries.append(f"""
+    <url>
+        <loc>{domain}/problems/{problem_id}</loc>
+        <priority>0.8</priority>
+    </url>""")
+
+    # Join them into a valid sitemap XML
+    sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{''.join(url_entries)}
+</urlset>"""
+
+    # 3) Return as XML
+    return text(sitemap_content, content_type="application/xml")
 
 
 if __name__ == "__main__":
