@@ -11,7 +11,7 @@ from pydantic import BaseModel
 import sqlite3
 
 from api.celery_app import app
-from api.settings import DATABASE, EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY
+from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY
 
 SYSTEM_PROMPT = """
 You are an AI assistant that classifies coding problems into structured data.
@@ -177,7 +177,7 @@ def cget_new_problems():
             continue
         problem_id = int(match.group(1))
 
-        with sqlite3.connect(DATABASE) as conn:
+        with sqlite3.connect(app.config.DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -196,7 +196,7 @@ def cget_new_problems():
         problem = problem.split("\n", 1)[1].strip()
         result["problem"] = problem
 
-        with sqlite3.connect(DATABASE) as conn:
+        with sqlite3.connect(app.config.DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
