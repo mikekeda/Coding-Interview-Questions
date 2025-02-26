@@ -181,11 +181,13 @@ async def sitemap_xml(request):
 
     for row in rows:
         problem_id = row["id"]
-        url_entries.append(f"""
+        url_entries.append(
+            f"""
     <url>
         <loc>{domain}/problems/{problem_id}</loc>
         <priority>0.8</priority>
-    </url>""")
+    </url>"""
+        )
 
     # Join them into a valid sitemap XML
     sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
