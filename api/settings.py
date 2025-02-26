@@ -32,6 +32,7 @@ SANIC_CONFIG = {
     "DEBUG": bool(get_env_var("DEBUG", "True")),
     "SOCKET_FILE": get_env_var("SOCKET_FILE", "/temp/site.sock"),
     "DATABASE": "problems.db",
+    "DOMAIN": get_env_var("DOMAIN", "http://localhost:3000"),
 }
 
 EMAIL = get_env_var("EMAIL")

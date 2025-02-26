@@ -51,7 +51,7 @@ function ProblemDetail({
       <Typography variant="h5" gutterBottom>
         {problem.id}. {problem.title}
       </Typography>
-      <Typography variant="subtitle1" gutterBottom>
+      <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>
         {problem.problem}
       </Typography>
 

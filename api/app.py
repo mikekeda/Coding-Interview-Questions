@@ -8,7 +8,7 @@ from api.settings import SANIC_CONFIG
 
 app = Sanic("CodingInterviewQuestionsApp")
 app.config.update(SANIC_CONFIG)
-CORS(app)  # enable CORS so our React app can call the API
+CORS(app, resources={r"/*": {"origins": app.config.DOMAIN}})
 
 
 # Helper: decode JSON string fields into lists
@@ -197,17 +197,15 @@ async def get_problem(request, problem_id):
 
 @app.get("/sitemap.xml")
 async def sitemap_xml(request):
-    domain = f"https://{request.host}"
-
     # 1) Basic static pages
     url_entries = [
         f"""
         <url>
-            <loc>{domain}/</loc>
+            <loc>{app.config.DOMAIN}/</loc>
             <priority>1.0</priority>
         </url>
         <url>
-            <loc>{domain}/about</loc>
+            <loc>{app.config.DOMAIN}/about</loc>
             <priority>0.8</priority>
         </url>
         """
@@ -224,7 +222,7 @@ async def sitemap_xml(request):
         url_entries.append(
             f"""
     <url>
-        <loc>{domain}/problems/{problem_id}</loc>
+        <loc>{app.config.DOMAIN}/problems/{problem_id}</loc>
         <priority>0.8</priority>
     </url>"""
         )
