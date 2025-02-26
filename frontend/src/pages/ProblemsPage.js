@@ -26,38 +26,39 @@ const baseUrl = hostname === 'localhost'
   : `${protocol}//${hostname}`;
 
 function ProblemsPage() {
-  // 1) Problem data & states
+  // Problem data & states
   const [problems, setProblems] = useState([]);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 2) Filter states
+  // Filter states
   const [filterCompany, setFilterCompany] = useState(null);
   const [filterDifficulty, setFilterDifficulty] = useState(null);
   const [filterDataStructure, setFilterDataStructure] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Data for filters
-  const [companies, setCompanies] = useState([]);
-  const [dataStructures, setDataStructures] = useState([]);
+  // Facet data
+  const [facetData, setFacetData] = useState({
+    company: [],
+    difficulty: [],
+    data_structures: []
+  });
 
-  // 3) Pagination
+  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // 4) Sort
+  // Sort
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // 5) Solved/Bookmark
+  // local storage for solved/bookmark
   const [problemStatus, setProblemStatus] = useState({});
 
-  // Router hooks for reading & setting URL param
-  const { problemId } = useParams();   // optional param
+  // Router
+  const { problemId } = useParams();
   const navigate = useNavigate();
 
-  // -------------------------------
-  // A) Load local storage on mount
-  // -------------------------------
+  // Load local storage
   useEffect(() => {
     const storedStatus = localStorage.getItem('problemStatus');
     if (storedStatus) {
@@ -69,46 +70,18 @@ function ProblemsPage() {
     localStorage.setItem('problemStatus', JSON.stringify(problemStatus));
   }, [problemStatus]);
 
-  // -------------------------------
-  // B) Fetch filter data (companies, dataStructures)
-  // -------------------------------
-  useEffect(() => {
-    // fetch companies
-    fetch(`${baseUrl}/api/companies`)
-      .then(res => res.json())
-      .then(data => setCompanies(data))
-      .catch(err => console.error(err));
-  }, []);
-
-  useEffect(() => {
-    // fetch data structures
-    fetch(`${baseUrl}/api/data_structures`)
-      .then(res => res.json())
-      .then(data => setDataStructures(data))
-      .catch(err => console.error(err));
-  }, []);
-
-  // -------------------------------
-  // C) Fetch problems (list)
-  // -------------------------------
+  // 1) Fetch problems
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     params.append('limit', 10);
     params.append('offset', (page - 1) * 10);
 
-    if (filterCompany) {
-      params.append('company', filterCompany);
-    }
-    if (filterDifficulty) {
-      params.append('difficulty', filterDifficulty);
-    }
-    if (filterDataStructure) {
-      params.append('data_structure', filterDataStructure);
-    }
-    if (searchTerm) {
-      params.append('search', searchTerm);
-    }
+    if (filterCompany) params.append('company', filterCompany);
+    if (filterDifficulty) params.append('difficulty', filterDifficulty);
+    if (filterDataStructure) params.append('data_structure', filterDataStructure);
+    if (searchTerm) params.append('search', searchTerm);
+
     params.append('sort_order', sortOrder);
 
     fetch(`${baseUrl}/api/problems?${params.toString()}`)
@@ -129,30 +102,44 @@ function ProblemsPage() {
     page
   ]);
 
-  // -------------------------------
-  // D) Sync URL param => selectedProblem
-  // -------------------------------
+  // 2) Fetch facet counts
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filterCompany) params.append('company', filterCompany);
+    if (filterDifficulty) params.append('difficulty', filterDifficulty);
+    if (filterDataStructure) params.append('data_structure', filterDataStructure);
+    if (searchTerm) params.append('search', searchTerm);
+
+    fetch(`${baseUrl}/api/facets?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+        setFacetData(data);
+      })
+      .catch(err => console.error(err));
+  }, [
+    filterCompany,
+    filterDifficulty,
+    filterDataStructure,
+    searchTerm
+  ]);
+
+  // 3) Sync URL param => selectedProblem
   useEffect(() => {
     if (!problemId) {
-      // no param => no problem selected
       setSelectedProblem(null);
       return;
     }
-
-    // Try to find in the loaded list
     const found = problems.find((p) => p.id === Number(problemId));
     if (found) {
       setSelectedProblem(found);
     } else {
-      // If not found, optionally do a single fetch
+      // Single fetch if not in the current list
       fetch(`${baseUrl}/api/problems/${problemId}`)
         .then(res => {
           if (!res.ok) throw new Error('Problem not found');
           return res.json();
         })
         .then((problem) => {
-          // Insert or push it into problems if you want
-          // Or just set it as selected
           setSelectedProblem(problem);
         })
         .catch(err => {
@@ -162,11 +149,8 @@ function ProblemsPage() {
     }
   }, [problemId, problems]);
 
-  // -------------------------------
-  // E) Handlers
-  // -------------------------------
+  // Handlers
   function selectProblem(problem) {
-    // user clicked on a problem in the list
     setSelectedProblem(problem);
     navigate(`/problems/${problem.id}`);
   }
@@ -191,7 +175,6 @@ function ProblemsPage() {
     });
   }
 
-  // helper to read status
   function getStatus(problemId) {
     return problemStatus[problemId] || { solved: false, bookmarked: false };
   }
@@ -210,31 +193,37 @@ function ProblemsPage() {
     setPage(1);
   }
 
-  // -------------------------------
-  // RENDER
-  // -------------------------------
+  function handleDifficultyClick(difficulty) {
+    setFilterDataStructure(null);
+    setFilterCompany(null);
+    setFilterDifficulty(difficulty);
+    setPage(1);
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Helmet>
         <title>Coding Interview Prep</title>
-        <meta name="description" content="Sharpen your coding interview skills with curated problems, hints, and solutions. Filter by company, difficulty, and data structures." />
+        <meta
+          name="description"
+          content="Sharpen your coding interview skills with curated problems, hints, and solutions. Filter by company, difficulty, and data structures."
+        />
       </Helmet>
-      {/* Reusable filter UI */}
+
+      {/* Reusable filter UI with facet data */}
       <Paper elevation={2} sx={{ mb: 3, p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           Filters
         </Typography>
         <SearchFilters
-          companies={companies}
-          difficulties={['Easy', 'Medium', 'Hard']}
-          dataStructures={dataStructures}
+          facetData={facetData}
           filterCompany={filterCompany}
-          filterDifficulty={filterDifficulty}
-          filterDataStructure={filterDataStructure}
-          searchTerm={searchTerm}
           setFilterCompany={(val) => { setFilterCompany(val); setPage(1); }}
+          filterDifficulty={filterDifficulty}
           setFilterDifficulty={(val) => { setFilterDifficulty(val); setPage(1); }}
+          filterDataStructure={filterDataStructure}
           setFilterDataStructure={(val) => { setFilterDataStructure(val); setPage(1); }}
+          searchTerm={searchTerm}
           setSearchTerm={(val) => { setSearchTerm(val); setPage(1); }}
         />
       </Paper>
@@ -244,9 +233,16 @@ function ProblemsPage() {
         <Grid item xs={12} md={4}>
           <Paper elevation={3}>
             <Box sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: 'flex', alignItems: 'center' }}
+              >
                 Problem List
-                <IconButton onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} sx={{ ml: 1 }}>
+                <IconButton
+                  onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  sx={{ ml: 1 }}
+                >
                   {sortOrder === 'asc' ? <ArrowDownwardIcon /> : <ArrowUpwardIcon />}
                 </IconButton>
               </Typography>
@@ -256,7 +252,9 @@ function ProblemsPage() {
                   <CircularProgress />
                 </Box>
               ) : problems.length === 0 ? (
-                <Typography variant="body1">No problems match your filters/search.</Typography>
+                <Typography variant="body1">
+                  No problems match your filters/search.
+                </Typography>
               ) : (
                 <ProblemList
                   problems={problems}
@@ -290,6 +288,7 @@ function ProblemsPage() {
                 problem={selectedProblem}
                 handleCompanyClick={handleCompanyClick}
                 handleDataStructureClick={handleDataStructureClick}
+                handleDifficultyClick={handleDifficultyClick}
               />
             </Box>
           </Paper>

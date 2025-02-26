@@ -33,108 +33,148 @@ def decode_fields(problem):
     return problem
 
 
-@app.get("/api/companies")
-async def list_companies(request):
-    companies = []
-    async with aiosqlite.connect(app.config.DATABASE) as db:
-        db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            'SELECT DISTINCT company FROM problems WHERE company IS NOT NULL AND company != ""'
-        )
-        rows = await cursor.fetchall()
-        for row in rows:
-            companies.append(row["company"])
-    return json(companies)
+def build_where_clause(request):
+    """
+    Reads query params (company, difficulty, search, data_structure)
+    and returns (where_sql, parameters).
+    """
+    where_sql = "WHERE 1=1"
+    parameters = []
+
+    company = request.args.get("company")
+    if company:
+        where_sql += " AND company = ?"
+        parameters.append(company)
+
+    difficulty = request.args.get("difficulty")
+    if difficulty:
+        where_sql += " AND difficulty = ?"
+        parameters.append(difficulty)
+
+    search = request.args.get("search")
+    if search:
+        where_sql += " AND title LIKE ?"
+        parameters.append(f"%{search}%")
+
+    data_structure = request.args.get("data_structure")
+    if data_structure:
+        where_sql += " AND data_structures LIKE ?"
+        parameters.append(f'%"{data_structure}"%')
+
+    return where_sql, parameters
 
 
-@app.get("/api/data_structures")
-async def list_data_structures(request):
-    ds_set = set()
+@app.get("/api/facets")
+async def list_facets(request):
+    # 1) Build the same WHERE clause
+    where_sql, parameters = build_where_clause(request)
+
+    # 2) We'll do separate queries for each dimension
+
+    # 2a) Company facet
+    # Example: SELECT company, COUNT(*) as cnt FROM problems WHERE ... GROUP BY company
+    company_facet_sql = f"SELECT company, COUNT(*) as cnt FROM problems {where_sql} GROUP BY company"
+
+    # 2b) Difficulty facet
+    difficulty_facet_sql = f"SELECT difficulty, COUNT(*) as cnt FROM problems {where_sql} GROUP BY difficulty"
+
+    # 2c) Data structures require reading each row, parsing JSON, counting in Python
+
     async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute("SELECT data_structures FROM problems")
+
+        # 3) Company facet
+        company_facet_data = []
+        cursor = await db.execute(company_facet_sql, parameters)
         rows = await cursor.fetchall()
         for row in rows:
-            if row["data_structures"]:
+            if row["company"]:
+                company_facet_data.append({
+                    "value": row["company"],
+                    "count": row["cnt"]
+                })
+
+        # 4) Difficulty facet
+        difficulty_facet_data = []
+        cursor = await db.execute(difficulty_facet_sql, parameters)
+        rows = await cursor.fetchall()
+        for row in rows:
+            if row["difficulty"]:
+                difficulty_facet_data.append({
+                    "value": row["difficulty"],
+                    "count": row["cnt"]
+                })
+
+        # We want to sort the difficulties in the order: Easy, Medium, Hard
+        ORDER_MAP = {
+            "Easy": 0,
+            "Medium": 1,
+            "Hard": 2
+        }
+        # Sort the list in place using the custom order map
+        difficulty_facet_data.sort(key=lambda item: ORDER_MAP.get(item["value"], 999))
+
+        # 5) Data structures facet
+        # We can't easily group by data_structures if it's JSON,
+        # so we fetch all matching rows, parse the JSON, accumulate counts.
+        ds_count = {}
+        ds_query = f"SELECT data_structures FROM problems {where_sql}"
+        cursor = await db.execute(ds_query, parameters)
+        rows = await cursor.fetchall()
+        for row in rows:
+            ds_field = row["data_structures"]
+            if ds_field:
                 try:
-                    ds_list = jsonlib.loads(row["data_structures"])
+                    ds_list = jsonlib.loads(ds_field)
                     for ds in ds_list:
-                        ds_set.add(ds)
+                        ds_count[ds] = ds_count.get(ds, 0) + 1
                 except:
                     pass
-    # Return a sorted list
-    data_structures = sorted(ds_set)
-    return json(data_structures)
+        data_structures_facet_data = []
+        for ds, cnt in ds_count.items():
+            data_structures_facet_data.append({
+                "value": ds,
+                "count": cnt
+            })
+
+        # sort by count
+        data_structures_facet_data.sort(key=lambda x: x["count"], reverse=True)
+
+    # 6) Return them all
+    return json({
+        "company": company_facet_data,
+        "difficulty": difficulty_facet_data,
+        "data_structures": data_structures_facet_data
+    })
 
 
 @app.get("/api/problems")
 async def list_problems(request):
-    query = "SELECT * FROM problems WHERE 1=1"
-    count_query = "SELECT COUNT(*) as total FROM problems WHERE 1=1"
-    parameters = []
-    count_parameters = []
+    where_sql, parameters = build_where_clause(request)
 
-    # Filtering by company
-    company = request.args.get("company")
-    if company:
-        query += " AND company = ?"
-        count_query += " AND company = ?"
-        parameters.append(company)
-        count_parameters.append(company)
-
-    # Filtering by difficulty
-    difficulty = request.args.get("difficulty")
-    if difficulty:
-        query += " AND difficulty = ?"
-        count_query += " AND difficulty = ?"
-        parameters.append(difficulty)
-        count_parameters.append(difficulty)
-
-    # Searching by title (for example)
-    search = request.args.get("search")
-    if search:
-        # Use LIKE to match any substring
-        query += " AND title LIKE ?"
-        count_query += " AND title LIKE ?"
-        like_value = f"%{search}%"
-        parameters.append(like_value)
-        count_parameters.append(like_value)
-
-    # Filtering by data_structure
-    data_structure = request.args.get("data_structure")
-    if data_structure:
-        query += " AND data_structures LIKE ?"
-        count_query += " AND data_structures LIKE ?"
-        like_value = f'%"{data_structure}"%'
-        parameters.append(like_value)
-        count_parameters.append(like_value)
-
-    # Sorting
     sort_order = request.args.get("sort_order", "asc").lower()
     if sort_order not in {"asc", "desc"}:
-        sort_order = "asc"  # default/fallback
+        sort_order = "asc"
 
-    # We'll do ORDER BY id [asc/desc]
-    query += f" ORDER BY id {sort_order}"
-    count_query += ""  # Typically we don't need an order for the count query
-
-    # Pagination
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
-    query += " LIMIT ? OFFSET ?"
-    parameters.extend([limit, offset])
+
+    query = f"SELECT * FROM problems {where_sql} ORDER BY id {sort_order} LIMIT ? OFFSET ?"
+    parameters_for_query = parameters + [limit, offset]
+
+    count_query = f"SELECT COUNT(*) as total FROM problems {where_sql}"
 
     problems_list = []
     async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
 
         # 1) Get total count
-        cursor_count = await db.execute(count_query, count_parameters)
+        cursor_count = await db.execute(count_query, parameters)
         row_count = await cursor_count.fetchone()
         total = row_count["total"] if row_count else 0
 
         # 2) Get the actual rows
-        cursor = await db.execute(query, parameters)
+        cursor = await db.execute(query, parameters_for_query)
         rows = await cursor.fetchall()
         for row in rows:
             problem = dict(row)
