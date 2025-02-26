@@ -168,10 +168,10 @@ def get_problems():
 
 
 @app.task()
-def cget_new_problems():
+def get_new_problems():
     client = OpenAI(api_key=OPENAI_API_KEY)
 
-    for subject, problem in get_problems():
+    for subject, problem_text in get_problems():
         match = re.search(r"Problem #(\d+)", subject)
         if not match:
             print(">>>", subject)
@@ -181,21 +181,19 @@ def cget_new_problems():
         with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                """
-                SELECT * FROM problems WHERE id = ?
-            """,
+                "SELECT * FROM problems WHERE id = ?",
                 (problem_id,),
             )
-            problem = cursor.fetchone()
-            if problem:
+            existing_problem = cursor.fetchone()
+            if existing_problem:
                 continue
 
-        result = classify_problem(client, problem)
+        result = classify_problem(client, problem_text)
         result = dict(result)
         result["id"] = problem_id
-        # skip first line of the problem statement
-        problem = problem.split("\n", 1)[1].strip()
-        result["problem"] = problem
+        # Skip first line of the problem statement
+        cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
+        result["problem"] = cleaned_problem_text
 
         with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
             cursor = conn.cursor()
@@ -208,7 +206,7 @@ def cget_new_problems():
                     edge_cases, input_types, output_types,
                     hints, solution, code_solution
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+                """,
                 (
                     result["id"],
                     result["title"],
@@ -216,7 +214,7 @@ def cget_new_problems():
                     result.get("company"),
                     result.get("source"),
                     result.get("difficulty"),
-                    json.dumps(result["data_structures"]),  # Store as JSON string
+                    json.dumps(result["data_structures"]),
                     json.dumps(result["algorithms"]),
                     json.dumps(result["tags"]),
                     result.get("time_complexity"),

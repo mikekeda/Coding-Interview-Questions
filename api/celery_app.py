@@ -8,7 +8,7 @@ app.autodiscover_tasks(["api"])
 
 app.conf.beat_schedule = {
     "every-hour": {
-        "task": "api.tasks.cget_new_problems",
+        "task": "api.tasks.get_new_problems",
         "schedule": crontab(hour="8", minute="15"),
         "args": (),
     },

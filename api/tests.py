@@ -11,6 +11,7 @@ sanic_app.config.DATABASE = "test.db"
 # Initialize TestManager for your Sanic app
 TestManager(sanic_app)
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_db_once():
     """
@@ -155,9 +156,12 @@ async def test_facets_no_filters():
     assert "difficulty" in data
     assert "data_structures" in data
 
-    google_facet = next((item for item in data["company"] if item["value"] == "Google"), None)
+    google_facet = next(
+        (item for item in data["company"] if item["value"] == "Google"), None
+    )
     assert google_facet is not None
     assert google_facet["count"] == 1
+
 
 @pytest.mark.asyncio
 async def test_facets_with_filters():
@@ -173,7 +177,9 @@ async def test_facets_with_filters():
     assert "difficulty" in data
     assert "data_structures" in data
 
-    easy_facet = next((item for item in data["difficulty"] if item["value"] == "Easy"), None)
+    easy_facet = next(
+        (item for item in data["difficulty"] if item["value"] == "Easy"), None
+    )
     assert easy_facet is not None
     assert easy_facet["count"] == 1
 

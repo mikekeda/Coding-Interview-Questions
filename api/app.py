@@ -73,7 +73,9 @@ async def list_facets(request):
 
     # 2a) Company facet
     # Example: SELECT company, COUNT(*) as cnt FROM problems WHERE ... GROUP BY company
-    company_facet_sql = f"SELECT company, COUNT(*) as cnt FROM problems {where_sql} GROUP BY company"
+    company_facet_sql = (
+        f"SELECT company, COUNT(*) as cnt FROM problems {where_sql} GROUP BY company"
+    )
 
     # 2b) Difficulty facet
     difficulty_facet_sql = f"SELECT difficulty, COUNT(*) as cnt FROM problems {where_sql} GROUP BY difficulty"
@@ -89,10 +91,9 @@ async def list_facets(request):
         rows = await cursor.fetchall()
         for row in rows:
             if row["company"]:
-                company_facet_data.append({
-                    "value": row["company"],
-                    "count": row["cnt"]
-                })
+                company_facet_data.append(
+                    {"value": row["company"], "count": row["cnt"]}
+                )
 
         # 4) Difficulty facet
         difficulty_facet_data = []
@@ -100,17 +101,12 @@ async def list_facets(request):
         rows = await cursor.fetchall()
         for row in rows:
             if row["difficulty"]:
-                difficulty_facet_data.append({
-                    "value": row["difficulty"],
-                    "count": row["cnt"]
-                })
+                difficulty_facet_data.append(
+                    {"value": row["difficulty"], "count": row["cnt"]}
+                )
 
         # We want to sort the difficulties in the order: Easy, Medium, Hard
-        ORDER_MAP = {
-            "Easy": 0,
-            "Medium": 1,
-            "Hard": 2
-        }
+        ORDER_MAP = {"Easy": 0, "Medium": 1, "Hard": 2}
         # Sort the list in place using the custom order map
         difficulty_facet_data.sort(key=lambda item: ORDER_MAP.get(item["value"], 999))
 
@@ -132,20 +128,19 @@ async def list_facets(request):
                     pass
         data_structures_facet_data = []
         for ds, cnt in ds_count.items():
-            data_structures_facet_data.append({
-                "value": ds,
-                "count": cnt
-            })
+            data_structures_facet_data.append({"value": ds, "count": cnt})
 
         # sort by count
         data_structures_facet_data.sort(key=lambda x: x["count"], reverse=True)
 
     # 6) Return them all
-    return json({
-        "company": company_facet_data,
-        "difficulty": difficulty_facet_data,
-        "data_structures": data_structures_facet_data
-    })
+    return json(
+        {
+            "company": company_facet_data,
+            "difficulty": difficulty_facet_data,
+            "data_structures": data_structures_facet_data,
+        }
+    )
 
 
 @app.get("/api/problems")
@@ -159,7 +154,9 @@ async def list_problems(request):
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
 
-    query = f"SELECT * FROM problems {where_sql} ORDER BY id {sort_order} LIMIT ? OFFSET ?"
+    query = (
+        f"SELECT * FROM problems {where_sql} ORDER BY id {sort_order} LIMIT ? OFFSET ?"
+    )
     parameters_for_query = parameters + [limit, offset]
 
     count_query = f"SELECT COUNT(*) as total FROM problems {where_sql}"
