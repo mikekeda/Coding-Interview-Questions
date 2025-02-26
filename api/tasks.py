@@ -10,6 +10,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 import sqlite3
 
+from api.settings import SANIC_CONFIG
 from api.celery_app import app
 from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY
 
@@ -177,7 +178,7 @@ def cget_new_problems():
             continue
         problem_id = int(match.group(1))
 
-        with sqlite3.connect(app.config.DATABASE) as conn:
+        with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -196,7 +197,7 @@ def cget_new_problems():
         problem = problem.split("\n", 1)[1].strip()
         result["problem"] = problem
 
-        with sqlite3.connect(app.config.DATABASE) as conn:
+        with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
