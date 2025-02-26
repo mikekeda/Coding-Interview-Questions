@@ -4,7 +4,7 @@ from sanic import Sanic
 from sanic.response import json, text
 from sanic_cors import CORS
 
-from api.settings import DATABASE, SANIC_CONFIG
+from api.settings import SANIC_CONFIG
 
 app = Sanic("CodingInterviewQuestionsApp")
 app.config.update(SANIC_CONFIG)
@@ -36,7 +36,7 @@ def decode_fields(problem):
 @app.get("/api/companies")
 async def list_companies(request):
     companies = []
-    async with aiosqlite.connect(DATABASE) as db:
+    async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             'SELECT DISTINCT company FROM problems WHERE company IS NOT NULL AND company != ""'
@@ -50,7 +50,7 @@ async def list_companies(request):
 @app.get("/api/data_structures")
 async def list_data_structures(request):
     ds_set = set()
-    async with aiosqlite.connect(DATABASE) as db:
+    async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT data_structures FROM problems")
         rows = await cursor.fetchall()
@@ -125,7 +125,7 @@ async def list_problems(request):
     parameters.extend([limit, offset])
 
     problems_list = []
-    async with aiosqlite.connect(DATABASE) as db:
+    async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
 
         # 1) Get total count
@@ -145,7 +145,7 @@ async def list_problems(request):
 
 @app.get("/api/problems/<problem_id:int>")
 async def get_problem(request, problem_id):
-    async with aiosqlite.connect(DATABASE) as db:
+    async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM problems WHERE id = ?", (problem_id,))
         row = await cursor.fetchone()
@@ -174,7 +174,7 @@ async def sitemap_xml(request):
     ]
 
     # 2) Query all problem IDs
-    async with aiosqlite.connect(DATABASE) as db:
+    async with aiosqlite.connect(app.config.DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT id FROM problems")
         rows = await cursor.fetchall()
