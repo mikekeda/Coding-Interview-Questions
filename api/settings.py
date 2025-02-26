@@ -2,7 +2,7 @@ import os
 
 import requests
 
-SITE_ENV_PREFIX = "CODING_INTERVIEW_QUESTIONS"
+SITE_ENV_PREFIX = "CODING"
 
 
 def get_env_var(name: str, default: str = "") -> str:
