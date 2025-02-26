@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import List, Optional
 
@@ -159,7 +160,7 @@ def get_problems():
                         try:
                             extracted_body = extract_problem_body(body)
                         except ValueError as e:
-                            print("Error extracting problem:", e)
+                            logging.warning("Error extracting problem: %s", e)
                             continue
                         yield subject, extracted_body
                         break
@@ -174,7 +175,7 @@ def get_new_problems():
     for subject, problem_text in get_problems():
         match = re.search(r"Problem #(\d+)", subject)
         if not match:
-            print(">>>", subject)
+            logging.warning(f"Could not extract problem ID from subject: {subject}")
             continue
         problem_id = int(match.group(1))
 
@@ -229,3 +230,6 @@ def get_new_problems():
                 ),
             )
             conn.commit()
+            logging.info(
+                f"Inserted problem {problem_id}. {result['title']} into the database."
+            )
