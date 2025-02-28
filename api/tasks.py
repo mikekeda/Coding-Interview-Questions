@@ -217,6 +217,7 @@ def get_problems():
 @app.task()
 def get_new_problems():
     client = OpenAI(api_key=OPENAI_API_KEY)
+    problems_added = 0
 
     with Session() as session:
         for subject, problem_text in get_problems():
@@ -246,3 +247,6 @@ def get_new_problems():
             logging.info(
                 f"Inserted problem {problem_id}. {result['title']} into the database."
             )
+            problems_added += 1
+
+    logging.info(f"Added {problems_added} new problems.")
