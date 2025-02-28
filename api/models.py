@@ -13,8 +13,9 @@ class DifficultyEnum(str, enum.Enum):
 
 Base = declarative_base()
 
+
 class Problem(Base):
-    __tablename__ = 'problems'
+    __tablename__ = "problems"
 
     id = Column(Integer, primary_key=True, autoincrement=False)
     title = Column(String, nullable=False)

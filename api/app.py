@@ -12,7 +12,7 @@ app.config.update(SANIC_CONFIG)
 CORS(app, resources={r"/*": {"origins": app.config.DOMAIN}})
 
 
-@app.listener('before_server_start')
+@app.listener("before_server_start")
 async def setup_db(_app, loop):
     _app.ctx.engine = create_async_engine(
         "postgresql+asyncpg://"
@@ -48,7 +48,7 @@ async def on_response(request: Request, response) -> None:
             await session.close()
 
 
-@app.listener('after_server_stop')
+@app.listener("after_server_stop")
 async def close_db(_app, loop):
     # Dispose engine on server shutdown
     await _app.ctx.engine.dispose()

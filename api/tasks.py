@@ -117,15 +117,15 @@ class ProblemSchema(BaseModel):
                 "edge_cases": ["Removing first node", "Empty list"],
                 "input_types": ["Singly Linked List", "Integer"],
                 "output_types": ["Modified Linked List"],
-                "hints": ["Use a dummy node to handle edge cases", "Think about two pointers"],
+                "hints": [
+                    "Use a dummy node to handle edge cases",
+                    "Think about two pointers",
+                ],
                 "solution": "Use two pointers to locate the nth node from the end.",
                 "code_solution": "def removeNthFromEnd(head, n): ...",
                 "test_cases": [
-                    {
-                        "input": "[1, 2, 3, 4, 5], 2",
-                        "output": "[1, 2, 3, 5]"
-                    }
-                ]
+                    {"input": "[1, 2, 3, 4, 5], 2", "output": "[1, 2, 3, 5]"}
+                ],
             }
         }
 
@@ -226,7 +226,9 @@ def get_new_problems():
                 continue
             problem_id = int(match.group(1))
 
-            existing_problem = session.query(exists().where(Problem.id == problem_id)).scalar()
+            existing_problem = session.query(
+                exists().where(Problem.id == problem_id)
+            ).scalar()
             if existing_problem:
                 continue
 
