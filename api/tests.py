@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 from sanic_testing import TestManager
 
-from api.app import app as sanic_app
+from api.views import app as sanic_app
 
 # Override the DB path for tests
 sanic_app.config.DATABASE = "test.db"

@@ -26,7 +26,7 @@ Given a coding problem statement, extract and return structured information in J
     "source": "Where the problem was found (if available)",
     "difficulty": "Estimated difficulty level (Easy, Medium, or Hard)",
     "data_structures": ["List of relevant data structures used in solving the problem"],
-    "algorithms": ["List of key algorithms or techniques required"],
+    "algorithms": ["List of key algorithms or techniques required (e.g., Sliding Window, Two Pointers)"],
     "tags": ["List of problem categories, such as 'In-Place', 'Edge Cases', etc."],
     "time_complexity": "Expected time complexity (e.g., O(n), O(log n), etc.)",
     "space_complexity": "Expected space complexity (e.g., O(1), O(n), etc.)",
@@ -35,16 +35,22 @@ Given a coding problem statement, extract and return structured information in J
     "input_types": ["List of input types such as 'Singly Linked List', 'Integer', etc."],
     "output_types": ["List of expected output types such as 'Modified Linked List'"],
     "hints": ["List of useful hints for solving the problem"],
-    "solution": "A brief high-level explanation of how to solve the problem"
-    "code_solution": "A well-formatted Python solution for the problem, written in a clear and optimal way"
+    "solution": "A brief high-level explanation of how to solve the problem",
+    "code_solution": "A well-formatted Python solution for the problem, written in a clear and optimal way",
+    "test_cases": [
+        {
+            "input": "Example input for a test case",
+            "output": "Expected output for the test case"
+        }
+    ]
 }
 
 ### Instructions:
 - Extract the **title** based on the main task in the problem.
 - Identify the **company** (if mentioned) and the **source** (if applicable).
 - Estimate the **difficulty** based on constraints and known problem complexity.
-- Determine relevant **data structures** and **algorithms** required to solve the problem.
-- Identify **tags** that classify the problem, such as "In-Place" or "Two Pointers".
+- Determine relevant **data structures** and **algorithms** (e.g., Sliding Window, Two Pointers) required to solve the problem.
+- Identify **tags** that classify the problem, such as "In-Place" or "Edge Cases".
 - Extract **time and space complexity** based on constraints.
 - If the problem restricts multiple passes, specify `passes_allowed`.
 - List **common edge cases** that should be considered.
@@ -52,6 +58,7 @@ Given a coding problem statement, extract and return structured information in J
 - Provide **hints** to guide a user in solving the problem.
 - Give a concise **solution explanation**.
 - The **code solution must be efficient**, using the best possible algorithm given the constraints.
+- Extract **test cases** by mapping sample input to the expected output.
 
 Respond ONLY with a valid JSON object following this schema.
 """
@@ -65,7 +72,7 @@ class Problem(BaseModel):
 
     # Core attributes
     data_structures: List[str]  # e.g., ["Linked List"]
-    algorithms: List[str]  # e.g., ["Two Pointers"]
+    algorithms: List[str]  # e.g., ["Two Pointers", "Sliding Window"]
     tags: List[str]  # e.g., ["In-Place", "Edge Cases"]
 
     # Constraints
@@ -77,11 +84,39 @@ class Problem(BaseModel):
     edge_cases: List[str]  # e.g., ["Removing first node", "Removing last node"]
     input_types: List[str]  # e.g., ["Singly Linked List", "Integer"]
     output_types: List[str]  # e.g., ["Modified Linked List"]
+    test_cases: List[dict]  # Each dict should have "input" and "output" keys
 
-    # New fields
     hints: List[str]  # e.g., ["Use two pointers", "Think about edge cases"]
     solution: Optional[str] = None  # Stores a brief solution description
     code_solution: Optional[str] = None  # Stores a code snippet to solve the problem
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "title": "Remove Nth Node From End of List",
+                "company": "Google",
+                "source": "Leetcode",
+                "difficulty": "Medium",
+                "data_structures": ["Linked List"],
+                "algorithms": ["Two Pointers", "Sliding Window"],
+                "tags": ["In-Place", "Edge Cases"],
+                "time_complexity": "O(n)",
+                "space_complexity": "O(1)",
+                "passes_allowed": 1,
+                "edge_cases": ["Removing first node", "Empty list"],
+                "input_types": ["Singly Linked List", "Integer"],
+                "output_types": ["Modified Linked List"],
+                "hints": ["Use a dummy node to handle edge cases", "Think about two pointers"],
+                "solution": "Use two pointers to locate the nth node from the end.",
+                "code_solution": "def removeNthFromEnd(head, n): ...",
+                "test_cases": [
+                    {
+                        "input": "[1, 2, 3, 4, 5], 2",
+                        "output": "[1, 2, 3, 5]"
+                    }
+                ]
+            }
+        }
 
 
 def classify_problem(client: OpenAI, problem: str) -> Problem:

@@ -4,7 +4,7 @@ import socket
 
 from sanic.log import logger
 
-from api.app import app
+from api.views import app
 
 if __name__ == "__main__":
     if app.config["DEBUG"]:
