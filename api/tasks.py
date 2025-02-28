@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 from typing import List, Optional
@@ -9,11 +8,18 @@ from email.header import decode_header
 
 from openai import OpenAI
 from pydantic import BaseModel
-import sqlite3
+from sqlalchemy import create_engine, exists
+from sqlalchemy.orm import sessionmaker
 
-from api.settings import SANIC_CONFIG
 from api.celery_app import app
-from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY
+from api.models import Problem
+from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY, SANIC_CONFIG
+
+engine = create_engine(
+    f"postgresql://{ SANIC_CONFIG['DB_USER'] }:{ SANIC_CONFIG['DB_PASSWORD'] }"
+    f"@{ SANIC_CONFIG['DB_HOST'] }/{ SANIC_CONFIG['DB_DATABASE'] }"
+)
+Session = sessionmaker(bind=engine)
 
 SYSTEM_PROMPT = """
 You are an AI assistant that classifies coding problems into structured data.
@@ -58,13 +64,17 @@ Given a coding problem statement, extract and return structured information in J
 - Provide **hints** to guide a user in solving the problem.
 - Give a concise **solution explanation**.
 - The **code solution must be efficient**, using the best possible algorithm given the constraints.
-- Extract **test cases** by mapping sample input to the expected output.
+- Extract **test cases** by mapping sample input to the expected output. Ensure that the extracted test cases include edge cases (for example, empty lists, lists with one element, etc.).
 
 Respond ONLY with a valid JSON object following this schema.
 """
 
+class TestCaseSchema(BaseModel):
+    input: str
+    output: str
 
-class Problem(BaseModel):
+
+class ProblemSchema(BaseModel):
     title: str
     company: Optional[str]  # Company that asked the question (e.g., "Google")
     source: Optional[str] = None  # e.g., "Google", "Leetcode"
@@ -84,14 +94,14 @@ class Problem(BaseModel):
     edge_cases: List[str]  # e.g., ["Removing first node", "Removing last node"]
     input_types: List[str]  # e.g., ["Singly Linked List", "Integer"]
     output_types: List[str]  # e.g., ["Modified Linked List"]
-    test_cases: List[dict]  # Each dict should have "input" and "output" keys
+    test_cases: List[TestCaseSchema]  # Each dict should have "input" and "output" keys
 
     hints: List[str]  # e.g., ["Use two pointers", "Think about edge cases"]
     solution: Optional[str] = None  # Stores a brief solution description
     code_solution: Optional[str] = None  # Stores a code snippet to solve the problem
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "Remove Nth Node From End of List",
                 "company": "Google",
@@ -119,7 +129,7 @@ class Problem(BaseModel):
         }
 
 
-def classify_problem(client: OpenAI, problem: str) -> Problem:
+def classify_problem(client: OpenAI, problem: str) -> ProblemSchema:
     # OPENAI_API_KEY should be set in your environment variables
     # list of models: https://platform.openai.com/docs/models
     # usage is here: https://platform.openai.com/settings/organization/usage
@@ -130,7 +140,7 @@ def classify_problem(client: OpenAI, problem: str) -> Problem:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": problem},
         ],
-        response_format=Problem,
+        response_format=ProblemSchema,
     )
 
     response = completion.choices[0].message.parsed
@@ -207,64 +217,29 @@ def get_problems():
 def get_new_problems():
     client = OpenAI(api_key=OPENAI_API_KEY)
 
-    for subject, problem_text in get_problems():
-        match = re.search(r"Problem #(\d+)", subject)
-        if not match:
-            logging.warning(f"Could not extract problem ID from subject: {subject}")
-            continue
-        problem_id = int(match.group(1))
+    with Session() as session:
+        for subject, problem_text in get_problems():
+            match = re.search(r"Problem #(\d+)", subject)
+            if not match:
+                logging.warning(f"Could not extract problem ID from subject: {subject}")
+                continue
+            problem_id = int(match.group(1))
 
-        with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM problems WHERE id = ?",
-                (problem_id,),
-            )
-            existing_problem = cursor.fetchone()
+            existing_problem = session.query(exists().where(Problem.id == problem_id)).scalar()
             if existing_problem:
                 continue
 
-        result = classify_problem(client, problem_text)
-        result = dict(result)
-        result["id"] = problem_id
-        # Skip first line of the problem statement
-        cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
-        result["problem"] = cleaned_problem_text
+            result = classify_problem(client, problem_text)
+            result = dict(result)
+            result["id"] = problem_id
+            # Skip first line of the problem statement
+            cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
+            result["problem"] = cleaned_problem_text
+            result["test_cases"] = [dict(v) for v in result["test_cases"]]
 
-        with sqlite3.connect(SANIC_CONFIG["DATABASE"]) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO problems (
-                    id, title, problem, company, source, difficulty,
-                    data_structures, algorithms, tags,
-                    time_complexity, space_complexity, passes_allowed,
-                    edge_cases, input_types, output_types,
-                    hints, solution, code_solution
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    result["id"],
-                    result["title"],
-                    result["problem"],
-                    result.get("company"),
-                    result.get("source"),
-                    result.get("difficulty"),
-                    json.dumps(result["data_structures"]),
-                    json.dumps(result["algorithms"]),
-                    json.dumps(result["tags"]),
-                    result.get("time_complexity"),
-                    result.get("space_complexity"),
-                    result.get("passes_allowed"),
-                    json.dumps(result["edge_cases"]),
-                    json.dumps(result["input_types"]),
-                    json.dumps(result["output_types"]),
-                    json.dumps(result["hints"]),
-                    result.get("solution"),
-                    result.get("code_solution"),
-                ),
-            )
-            conn.commit()
+            session.add(Problem(**result))
+            session.commit()
+
             logging.info(
                 f"Inserted problem {problem_id}. {result['title']} into the database."
             )

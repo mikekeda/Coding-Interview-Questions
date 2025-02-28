@@ -33,6 +33,10 @@ SANIC_CONFIG = {
     "SOCKET_FILE": get_env_var("SOCKET_FILE", "/temp/site.sock"),
     "DATABASE": "problems.db",
     "DOMAIN": get_env_var("DOMAIN", "http://localhost:3000"),
+    "DB_USER": get_env_var("DB_USER", "coding_admin"),
+    "DB_PASSWORD": get_env_var("DB_PASSWORD", ")e6`M94.F3.lE'i0}t-H"),
+    "DB_HOST": get_env_var("DB_HOST", "127.0.0.1"),
+    "DB_DATABASE": get_env_var("DB_NAME", "coding"),
 }
 
 EMAIL = get_env_var("EMAIL")
