@@ -1,6 +1,15 @@
+import enum
+
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, Enum
 from sqlalchemy.dialects.postgresql import JSONB
+
+
+class DifficultyEnum(str, enum.Enum):
+    Easy = "Easy"
+    Medium = "Medium"
+    Hard = "Hard"
+
 
 Base = declarative_base()
 
@@ -12,7 +21,7 @@ class Problem(Base):
     problem = Column(Text, nullable=False)
     company = Column(String, nullable=True)
     source = Column(String, nullable=True)
-    difficulty = Column(String, nullable=False)
+    difficulty = Column(Enum(DifficultyEnum), nullable=False)
     data_structures = Column(JSONB, nullable=False)
     algorithms = Column(JSONB, nullable=False)
     tags = Column(JSONB, nullable=False)
@@ -22,10 +31,10 @@ class Problem(Base):
     edge_cases = Column(JSONB, nullable=False)
     input_types = Column(JSONB, nullable=False)
     output_types = Column(JSONB, nullable=False)
-    test_cases = Column(JSONB, nullable=True)
+    test_cases = Column(JSONB, nullable=False)
     hints = Column(JSONB, nullable=False)
-    solution = Column(Text, nullable=True)
-    code_solution = Column(Text, nullable=True)
+    solution = Column(Text, nullable=False)
+    code_solution = Column(Text, nullable=False)
 
     def __repr__(self):
         return f"<Problem(id={self.id}, title='{self.title}')>"

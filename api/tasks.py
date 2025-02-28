@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, exists
 from sqlalchemy.orm import sessionmaker
 
 from api.celery_app import app
-from api.models import Problem
+from api.models import Problem, DifficultyEnum
 from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY, SANIC_CONFIG
 
 engine = create_engine(
@@ -69,6 +69,7 @@ Given a coding problem statement, extract and return structured information in J
 Respond ONLY with a valid JSON object following this schema.
 """
 
+
 class TestCaseSchema(BaseModel):
     input: str
     output: str
@@ -78,7 +79,7 @@ class ProblemSchema(BaseModel):
     title: str
     company: Optional[str]  # Company that asked the question (e.g., "Google")
     source: Optional[str] = None  # e.g., "Google", "Leetcode"
-    difficulty: Optional[str] = None  # e.g., "Easy", "Medium", "Hard"
+    difficulty: DifficultyEnum  # e.g., "Easy", "Medium", "Hard"
 
     # Core attributes
     data_structures: List[str]  # e.g., ["Linked List"]
@@ -97,8 +98,8 @@ class ProblemSchema(BaseModel):
     test_cases: List[TestCaseSchema]  # Each dict should have "input" and "output" keys
 
     hints: List[str]  # e.g., ["Use two pointers", "Think about edge cases"]
-    solution: Optional[str] = None  # Stores a brief solution description
-    code_solution: Optional[str] = None  # Stores a code snippet to solve the problem
+    solution: str  # Stores a brief solution description
+    code_solution: str  # Stores a code snippet to solve the problem
 
     class Config:
         json_schema_extra = {
