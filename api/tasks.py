@@ -238,11 +238,12 @@ def get_new_problems():
 
             result = classify_problem(client, problem_text)
             result = dict(result)
-            result["id"] = problem_id
+            result["external_id"] = problem_id
             # Skip first line of the problem statement
             cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
             result["problem"] = cleaned_problem_text
             result["test_cases"] = [dict(v) for v in result["test_cases"]]
+            result["source"] = "Daily Coding Problem"
 
             session.add(Problem(**result))
             session.commit()

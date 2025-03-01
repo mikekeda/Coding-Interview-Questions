@@ -17,11 +17,12 @@ Base = declarative_base()
 class Problem(Base):
     __tablename__ = "problems"
 
-    id = Column(Integer, primary_key=True, autoincrement=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
     problem = Column(Text, nullable=False)
     company = Column(String, nullable=True)
-    source = Column(String, nullable=True)
+    source = Column(String, nullable=False)
+    external_id = Column(Integer, nullable=False)
     difficulty = Column(Enum(DifficultyEnum), nullable=False)
     data_structures = Column(JSONB, nullable=False)
     algorithms = Column(JSONB, nullable=False)

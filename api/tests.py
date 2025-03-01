@@ -38,7 +38,7 @@ def setup_db_once():
 
     # Insert test data
     problem1 = Problem(
-        id=1,
+        external_id=1,
         title="Two Sum",
         problem="Given an array of integers...",
         difficulty="Easy",
@@ -52,9 +52,10 @@ def setup_db_once():
         hints=[],
         solution="def two_sum(nums, target):...",
         code_solution="def two_sum(nums, target):...",
+        source="tests",
     )
     problem2 = Problem(
-        id=1751,
+        external_id=1751,
         title="Climbing Stairs",
         problem="You can climb 1 or 2 steps...",
         company="Google",
@@ -69,6 +70,7 @@ def setup_db_once():
         hints=[],
         solution="def two_sum(nums, target):...",
         code_solution="def two_sum(nums, target):...",
+        source="tests",
     )
     session.add_all([problem1, problem2])
     session.commit()
