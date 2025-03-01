@@ -228,19 +228,21 @@ def get_new_problems():
             if not match:
                 logging.warning(f"Could not extract problem ID from subject: {subject}")
                 continue
+
             problem_id = int(match.group(1))
+            # Skip first line of the problem statement
+            cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
 
             existing_problem = session.query(
-                exists().where(Problem.id == problem_id)
+                exists().where(Problem.problem == cleaned_problem_text)
             ).scalar()
             if existing_problem:
+                logging.info(f"Saw existing problem {problem_id}. Skipping.")
                 continue
 
             result = classify_problem(client, problem_text)
             result = dict(result)
             result["external_id"] = problem_id
-            # Skip first line of the problem statement
-            cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
             result["problem"] = cleaned_problem_text
             result["test_cases"] = [dict(v) for v in result["test_cases"]]
             result["source"] = "Daily Coding Problem"
