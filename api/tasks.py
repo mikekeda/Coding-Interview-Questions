@@ -186,7 +186,7 @@ def get_problems():
     _, msgnums = imap.search(None, 'SUBJECT "Daily Coding Problem: Problem #"')
     msgnums = msgnums[0].decode("utf-8").split()
     msgnums.reverse()  # process older messages first
-    logging.info(
+    logging.debug(
         f"Found {len(msgnums)} problems in mail with subject 'Daily Coding Problem'."
     )
 

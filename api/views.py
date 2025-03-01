@@ -1,144 +1,106 @@
 import json as jsonlib  # to avoid confusion with sanic.response.json
-import aiosqlite
+
+from sanic.exceptions import InvalidUsage
 from sanic.response import json, text
+from sqlalchemy import cast, func, select
 
 from api.app import app
-
-# Helper: decode JSON string fields into lists
-def decode_fields(problem):
-    json_fields = [
-        "data_structures",
-        "algorithms",
-        "tags",
-        "edge_cases",
-        "input_types",
-        "output_types",
-        "hints",
-    ]
-    for field in json_fields:
-        if problem.get(field):
-            try:
-                problem[field] = jsonlib.loads(problem[field])
-            except Exception:
-                problem[field] = []
-        else:
-            problem[field] = []
-    return problem
+from api.models import Problem, DifficultyEnum
 
 
-def build_where_clause(request):
+def build_filters(request):
     """
-    Reads query params (company, difficulty, search, data_structure)
-    and returns (where_sql, parameters).
+    Read query params (company, difficulty, search, data_structure)
+    and return a list of SQLAlchemy filter expressions.
     """
-    where_sql = "WHERE 1=1"
-    parameters = []
-
+    filters = []
     company = request.args.get("company")
     if company:
-        where_sql += " AND company = ?"
-        parameters.append(company)
+        filters.append(Problem.company == company)
 
     difficulty = request.args.get("difficulty")
     if difficulty:
-        where_sql += " AND difficulty = ?"
-        parameters.append(difficulty)
+        try:
+            filters.append(Problem.difficulty == DifficultyEnum(difficulty).value)
+        except ValueError:
+            # The user provided an invalid difficulty; skip or handle error
+            raise InvalidUsage("Invalid difficulty value for filter")
 
     search = request.args.get("search")
     if search:
-        where_sql += " AND title LIKE ?"
-        parameters.append(f"%{search}%")
+        # ilike for case-insensitive search
+        filters.append(Problem.title.ilike(f"%{search}%"))
 
     data_structure = request.args.get("data_structure")
     if data_structure:
-        where_sql += " AND data_structures LIKE ?"
-        parameters.append(f'%"{data_structure}"%')
+        # Use the JSONB contains operator. This checks if the JSON array contains the value.
+        filters.append(Problem.data_structures.contains([data_structure]))
 
-    return where_sql, parameters
+    return filters
 
 
 @app.get("/api/facets")
 async def list_facets(request):
-    # 1) Build the same WHERE clause
-    where_sql, parameters = build_where_clause(request)
+    session = request.ctx.session
+    filters = build_filters(request)
 
-    # 2) We'll do separate queries for each dimension
-
-    # 2a) Company facet
-    # Example: SELECT company, COUNT(*) as cnt FROM problems WHERE ... GROUP BY company
-    company_facet_sql = (
-        f"SELECT company, COUNT(*) as cnt FROM problems {where_sql} GROUP BY company"
+    # Company facet: group by company and count matching records
+    company_stmt = (
+        select(Problem.company, func.count(Problem.id).label("cnt"))
+        .where(*filters)
+        .group_by(Problem.company)
     )
+    result = await session.execute(company_stmt)
+    company_facets = [
+        {"value": row.company, "count": row.cnt}
+        for row in result.fetchall()
+        if row.company
+    ]
 
-    # 2b) Difficulty facet
-    difficulty_facet_sql = f"SELECT difficulty, COUNT(*) as cnt FROM problems {where_sql} GROUP BY difficulty"
+    # Difficulty facet: group by difficulty
+    difficulty_stmt = (
+        select(Problem.difficulty, func.count(Problem.id).label("cnt"))
+        .where(*filters)
+        .group_by(Problem.difficulty)
+    )
+    result = await session.execute(difficulty_stmt)
+    difficulty_facets = [
+        {"value": row.difficulty, "count": row.cnt}
+        for row in result.fetchall()
+        if row.difficulty
+    ]
 
-    # 2c) Data structures require reading each row, parsing JSON, counting in Python
+    # Sort difficulties in order: Easy, Medium, Hard
+    ORDER_MAP = {"Easy": 0, "Medium": 1, "Hard": 2}
+    difficulty_facets.sort(key=lambda item: ORDER_MAP.get(item["value"], 999))
 
-    async with aiosqlite.connect(app.config.DATABASE) as db:
-        db.row_factory = aiosqlite.Row
+    # Data structures facet: fetch all matching rows and aggregate counts from JSONB list
+    ds_stmt = select(Problem.data_structures).where(*filters)
+    result = await session.execute(ds_stmt)
+    ds_count = {}
+    for row in result.fetchall():
+        ds_field = row[0]  # data_structures column
+        if ds_field and isinstance(ds_field, list):
+            for ds in ds_field:
+                ds_count[ds] = ds_count.get(ds, 0) + 1
+    data_structures_facets = [
+        {"value": ds, "count": count} for ds, count in ds_count.items()
+    ]
+    data_structures_facets.sort(key=lambda x: x["count"], reverse=True)
 
-        # 3) Company facet
-        company_facet_data = []
-        cursor = await db.execute(company_facet_sql, parameters)
-        rows = await cursor.fetchall()
-        for row in rows:
-            if row["company"]:
-                company_facet_data.append(
-                    {"value": row["company"], "count": row["cnt"]}
-                )
-
-        # 4) Difficulty facet
-        difficulty_facet_data = []
-        cursor = await db.execute(difficulty_facet_sql, parameters)
-        rows = await cursor.fetchall()
-        for row in rows:
-            if row["difficulty"]:
-                difficulty_facet_data.append(
-                    {"value": row["difficulty"], "count": row["cnt"]}
-                )
-
-        # We want to sort the difficulties in the order: Easy, Medium, Hard
-        ORDER_MAP = {"Easy": 0, "Medium": 1, "Hard": 2}
-        # Sort the list in place using the custom order map
-        difficulty_facet_data.sort(key=lambda item: ORDER_MAP.get(item["value"], 999))
-
-        # 5) Data structures facet
-        # We can't easily group by data_structures if it's JSON,
-        # so we fetch all matching rows, parse the JSON, accumulate counts.
-        ds_count = {}
-        ds_query = f"SELECT data_structures FROM problems {where_sql}"
-        cursor = await db.execute(ds_query, parameters)
-        rows = await cursor.fetchall()
-        for row in rows:
-            ds_field = row["data_structures"]
-            if ds_field:
-                try:
-                    ds_list = jsonlib.loads(ds_field)
-                    for ds in ds_list:
-                        ds_count[ds] = ds_count.get(ds, 0) + 1
-                except:
-                    pass
-        data_structures_facet_data = []
-        for ds, cnt in ds_count.items():
-            data_structures_facet_data.append({"value": ds, "count": cnt})
-
-        # sort by count
-        data_structures_facet_data.sort(key=lambda x: x["count"], reverse=True)
-
-    # 6) Return them all
     return json(
         {
-            "company": company_facet_data,
-            "difficulty": difficulty_facet_data,
-            "data_structures": data_structures_facet_data,
+            "company": company_facets,
+            "difficulty": difficulty_facets,
+            "data_structures": data_structures_facets,
         }
     )
 
 
 @app.get("/api/problems")
 async def list_problems(request):
-    where_sql, parameters = build_where_clause(request)
+    session = request.ctx.session
+    filters = build_filters(request)
 
     sort_order = request.args.get("sort_order", "asc").lower()
     if sort_order not in {"asc", "desc"}:
@@ -147,83 +109,70 @@ async def list_problems(request):
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
 
+    # Build the query with ordering and pagination
     query = (
-        f"SELECT * FROM problems {where_sql} ORDER BY id {sort_order} LIMIT ? OFFSET ?"
+        select(Problem)
+        .where(*filters)
+        .order_by(Problem.id.asc() if sort_order == "asc" else Problem.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
-    parameters_for_query = parameters + [limit, offset]
+    result = await session.execute(query)
+    problems = result.scalars().all()
 
-    count_query = f"SELECT COUNT(*) as total FROM problems {where_sql}"
+    # Count total number of records matching the filters
+    count_query = select(func.count(Problem.id)).where(*filters)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
-    problems_list = []
-    async with aiosqlite.connect(app.config.DATABASE) as db:
-        db.row_factory = aiosqlite.Row
-
-        # 1) Get total count
-        cursor_count = await db.execute(count_query, parameters)
-        row_count = await cursor_count.fetchone()
-        total = row_count["total"] if row_count else 0
-
-        # 2) Get the actual rows
-        cursor = await db.execute(query, parameters_for_query)
-        rows = await cursor.fetchall()
-        for row in rows:
-            problem = dict(row)
-            problems_list.append(decode_fields(problem))  # decode_fields as needed
-
+    problems_list = [problem.to_dict() for problem in problems]
     return json({"problems": problems_list, "total": total})
 
 
 @app.get("/api/problems/<problem_id:int>")
 async def get_problem(request, problem_id):
-    async with aiosqlite.connect(app.config.DATABASE) as db:
-        db.row_factory = aiosqlite.Row
-        cursor = await db.execute("SELECT * FROM problems WHERE id = ?", (problem_id,))
-        row = await cursor.fetchone()
-        if row is None:
-            return json({"error": "Problem not found"}, status=404)
-        problem = dict(row)
-        return json(decode_fields(problem))
+    session = request.ctx.session
+    query = select(Problem).where(Problem.id == problem_id)
+    result = await session.execute(query)
+    problem = result.scalar_one_or_none()
+    if not problem:
+        return json({"error": "Problem not found"}, status=404)
+    return json(problem.to_dict())
 
 
 @app.get("/sitemap.xml")
 async def sitemap_xml(request):
-    # 1) Basic static pages
+    session = request.ctx.session
+    query = select(Problem.id)
+    result = await session.execute(query)
+    ids = [row[0] for row in result.fetchall()]
+
+    # Basic static pages
     url_entries = [
         f"""
         <url>
-            <loc>{app.config.DOMAIN}/</loc>
+            <loc>{request.app.config.DOMAIN}/</loc>
             <priority>1.0</priority>
         </url>
         <url>
-            <loc>{app.config.DOMAIN}/about</loc>
+            <loc>{request.app.config.DOMAIN}/about</loc>
             <priority>0.8</priority>
         </url>
         """
     ]
-
-    # 2) Query all problem IDs
-    async with aiosqlite.connect(app.config.DATABASE) as db:
-        db.row_factory = aiosqlite.Row
-        cursor = await db.execute("SELECT id FROM problems")
-        rows = await cursor.fetchall()
-
-    for row in rows:
-        problem_id = row["id"]
+    for problem_id in ids:
         url_entries.append(
             f"""
-    <url>
-        <loc>{app.config.DOMAIN}/problems/{problem_id}</loc>
-        <priority>0.8</priority>
-    </url>"""
+        <url>
+            <loc>{request.app.config.DOMAIN}/problems/{problem_id}</loc>
+            <priority>0.8</priority>
+        </url>
+        """
         )
-
-    # Join them into a valid sitemap XML
     sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {''.join(url_entries)}
 </urlset>"""
-
-    # 3) Return as XML
     return text(sitemap_content, content_type="application/xml")
 
 
