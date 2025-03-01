@@ -19,7 +19,9 @@ function ProblemDetail({
   problem,
   handleCompanyClick,
   handleDataStructureClick,
-  handleDifficultyClick
+  handleDifficultyClick,
+  handleAlgorithmClick,
+  handleTagClick
 }) {
   if (!problem) {
     return (
@@ -77,13 +79,13 @@ function ProblemDetail({
         )}
       </Stack>
 
-      {/* Data Structures & Difficulty */}
+      {/* Data Structures, Algorithms & Difficulty */}
       <Stack spacing={1} sx={{ mb: 2 }}>
         {/* Data Structures */}
         {problem.data_structures?.length > 0 && (
           <Box>
             <strong>Data Structures:</strong>{' '}
-            {problem.data_structures.map((ds, idx) => (
+            {problem.data_structures.map((ds) => (
               <Chip
                 key={ds}
                 label={ds}
@@ -92,6 +94,24 @@ function ProblemDetail({
                 size="small"
                 onClick={() => handleDataStructureClick(ds)}
                 sx={{ mr: 1, mb: 1, cursor: 'pointer' }}
+              />
+            ))}
+          </Box>
+        )}
+
+        {/* Algorithms */}
+        {problem.algorithms?.length > 0 && (
+          <Box>
+            <strong>Algorithms:</strong>{' '}
+            {problem.algorithms.map((algo) => (
+              <Chip
+                key={algo}
+                label={algo}
+                variant="outlined"
+                color="secondary"
+                size="small"
+                onClick={() => handleAlgorithmClick(algo)}
+                sx={{ mr: 1, mb: 1 }}
               />
             ))}
           </Box>
@@ -113,6 +133,24 @@ function ProblemDetail({
           )}
         </Box>
       </Stack>
+
+      {/* Tags */}
+      {problem.tags?.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <strong>Tags:</strong>{' '}
+          {problem.tags.map((tag) => (
+            <Chip
+              key={tag}
+              label={tag}
+              variant="outlined"
+              color="info"
+              size="small"
+              onClick={() => handleTagClick(tag)}
+              sx={{ mr: 1, mb: 1 }}
+            />
+          ))}
+        </Box>
+      )}
 
       {/* Additional Metadata in a 2-column Grid */}
       <Grid container spacing={1} sx={{ mb: 2 }}>
@@ -192,6 +230,32 @@ function ProblemDetail({
           </Typography>
         </Grid>
       </Grid>
+
+      {/* Test Cases */}
+       <Accordion sx={{ mt: 3 }}>
+         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+           <Typography variant="h6">Test Cases</Typography>
+         </AccordionSummary>
+         <AccordionDetails>
+           {problem.test_cases && problem.test_cases.length > 0 ? (
+             problem.test_cases.map((testCase, index) => (
+               <Box key={index} sx={{ mb: 2 }}>
+                 <Typography variant="subtitle2">
+                   Test Case #{index + 1}
+                 </Typography>
+                 <Typography variant="body2">
+                   <strong>Input:</strong> {testCase.input}
+                 </Typography>
+                 <Typography variant="body2">
+                   <strong>Output:</strong> {testCase.output}
+                 </Typography>
+               </Box>
+             ))
+           ) : (
+             <Typography variant="body2">No test cases available.</Typography>
+           )}
+         </AccordionDetails>
+       </Accordion>
 
       {/* Hints */}
       <Box sx={{ mt: 3 }}>

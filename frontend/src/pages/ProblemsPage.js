@@ -26,6 +26,10 @@ const baseUrl = hostname === 'localhost'
   : `${protocol}//${hostname}`;
 
 function ProblemsPage() {
+  // =========================
+  //  State Variables
+  // =========================
+
   // Problem data & states
   const [problems, setProblems] = useState([]);
   const [selectedProblem, setSelectedProblem] = useState(null);
@@ -35,13 +39,21 @@ function ProblemsPage() {
   const [filterCompany, setFilterCompany] = useState(null);
   const [filterDifficulty, setFilterDifficulty] = useState(null);
   const [filterDataStructure, setFilterDataStructure] = useState(null);
+
+  // NEW: Algorithm + Tags filters
+  const [filterAlgorithm, setFilterAlgorithm] = useState(null);
+  // Initialize tags as an empty array to avoid `.includes` errors
+  const [filterTag, setFilterTag] = useState(null);
+
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Facet data
+  // Facet data (add algorithms + tags here too)
   const [facetData, setFacetData] = useState({
     company: [],
     difficulty: [],
-    data_structures: []
+    data_structures: [],
+    algorithms: [],
+    tags: [],
   });
 
   // Pagination
@@ -58,7 +70,10 @@ function ProblemsPage() {
   const { problemId } = useParams();
   const navigate = useNavigate();
 
-  // Load local storage
+  // =========================
+  //  Local Storage Sync
+  // =========================
+
   useEffect(() => {
     const storedStatus = localStorage.getItem('problemStatus');
     if (storedStatus) {
@@ -70,7 +85,10 @@ function ProblemsPage() {
     localStorage.setItem('problemStatus', JSON.stringify(problemStatus));
   }, [problemStatus]);
 
-  // 1) Fetch problems
+  // =========================
+  //  1) Fetch Problems
+  // =========================
+
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -81,28 +99,35 @@ function ProblemsPage() {
     if (filterDifficulty) params.append('difficulty', filterDifficulty);
     if (filterDataStructure) params.append('data_structure', filterDataStructure);
     if (searchTerm) params.append('search', searchTerm);
+    if (filterAlgorithm) params.append('algorithm', filterAlgorithm);
+    if (filterTag) params.append('tag', filterTag);
 
     params.append('sort_order', sortOrder);
 
     fetch(`${baseUrl}/api/problems?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setProblems(data.problems || []);
         const totalCount = data.total || 0;
         setTotalPages(Math.ceil(totalCount / 10));
       })
-      .catch(err => console.error(err))
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [
     filterCompany,
     filterDifficulty,
     filterDataStructure,
+    filterAlgorithm,
+    filterTag,
     searchTerm,
     sortOrder,
     page
   ]);
 
-  // 2) Fetch facet counts
+  // =========================
+  //  2) Fetch Facet Counts
+  // =========================
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (filterCompany) params.append('company', filterCompany);
@@ -110,20 +135,33 @@ function ProblemsPage() {
     if (filterDataStructure) params.append('data_structure', filterDataStructure);
     if (searchTerm) params.append('search', searchTerm);
 
+    // NEW: Add algorithm + tags to facets query as well
+    if (filterAlgorithm) {
+      params.append('algorithm', filterAlgorithm);
+    }
+    if (filterTag) {
+      params.append('tag', filterTag);
+    }
+
     fetch(`${baseUrl}/api/facets?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setFacetData(data);
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error(err));
   }, [
     filterCompany,
     filterDifficulty,
     filterDataStructure,
+    filterAlgorithm,
+    filterTag,
     searchTerm
   ]);
 
-  // 3) Sync URL param => selectedProblem
+  // =========================
+  //  3) Sync URL param => selectedProblem
+  // =========================
+
   useEffect(() => {
     if (!problemId) {
       setSelectedProblem(null);
@@ -135,28 +173,31 @@ function ProblemsPage() {
     } else {
       // Single fetch if not in the current list
       fetch(`${baseUrl}/api/problems/${problemId}`)
-        .then(res => {
+        .then((res) => {
           if (!res.ok) throw new Error('Problem not found');
           return res.json();
         })
         .then((problem) => {
           setSelectedProblem(problem);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error(err);
           setSelectedProblem(null);
         });
     }
   }, [problemId, problems]);
 
-  // Handlers
+  // =========================
+  //  Handlers
+  // =========================
+
   function selectProblem(problem) {
     setSelectedProblem(problem);
     navigate(`/problems/${problem.id}`);
   }
 
   function toggleSolved(problemId) {
-    setProblemStatus(prev => {
+    setProblemStatus((prev) => {
       const current = prev[problemId] || { solved: false, bookmarked: false };
       return {
         ...prev,
@@ -166,7 +207,7 @@ function ProblemsPage() {
   }
 
   function toggleBookmarked(problemId) {
-    setProblemStatus(prev => {
+    setProblemStatus((prev) => {
       const current = prev[problemId] || { solved: false, bookmarked: false };
       return {
         ...prev,
@@ -181,22 +222,26 @@ function ProblemsPage() {
 
   function handleCompanyClick(companyName) {
     setFilterCompany(companyName);
-    setFilterDifficulty(null);
-    setFilterDataStructure(null);
     setPage(1);
   }
 
   function handleDataStructureClick(ds) {
     setFilterDataStructure(ds);
-    setFilterCompany(null);
-    setFilterDifficulty(null);
     setPage(1);
   }
 
   function handleDifficultyClick(difficulty) {
-    setFilterDataStructure(null);
-    setFilterCompany(null);
     setFilterDifficulty(difficulty);
+    setPage(1);
+  }
+
+  function handleAlgorithmClick(algo) {
+    setFilterAlgorithm(algo);
+    setPage(1);
+  }
+
+  function handleTagClick(tag) {
+    setFilterTag(tag);
     setPage(1);
   }
 
@@ -217,12 +262,22 @@ function ProblemsPage() {
         </Typography>
         <SearchFilters
           facetData={facetData}
+
           filterCompany={filterCompany}
           setFilterCompany={(val) => { setFilterCompany(val); setPage(1); }}
+
           filterDifficulty={filterDifficulty}
           setFilterDifficulty={(val) => { setFilterDifficulty(val); setPage(1); }}
+
           filterDataStructure={filterDataStructure}
           setFilterDataStructure={(val) => { setFilterDataStructure(val); setPage(1); }}
+
+          filterAlgorithm={filterAlgorithm}
+          setFilterAlgorithm={(val) => { setFilterAlgorithm(val); setPage(1); }}
+
+          filterTag={filterTag}
+          setFilterTag={(val) => { setFilterTag(val); setPage(1); }}
+
           searchTerm={searchTerm}
           setSearchTerm={(val) => { setSearchTerm(val); setPage(1); }}
         />
@@ -289,6 +344,8 @@ function ProblemsPage() {
                 handleCompanyClick={handleCompanyClick}
                 handleDataStructureClick={handleDataStructureClick}
                 handleDifficultyClick={handleDifficultyClick}
+                handleAlgorithmClick={handleAlgorithmClick}
+                handleTagClick={handleTagClick}
               />
             </Box>
           </Paper>

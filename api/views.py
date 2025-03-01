@@ -1,8 +1,6 @@
-import json as jsonlib  # to avoid confusion with sanic.response.json
-
 from sanic.exceptions import InvalidUsage
 from sanic.response import json, text
-from sqlalchemy import cast, func, select
+from sqlalchemy import func, select
 
 from api.app import app
 from api.models import Problem, DifficultyEnum
@@ -10,31 +8,45 @@ from api.models import Problem, DifficultyEnum
 
 def build_filters(request):
     """
-    Read query params (company, difficulty, search, data_structure)
+    Read query params (company, difficulty, data_structure, search, algorithm, tags)
     and return a list of SQLAlchemy filter expressions.
     """
     filters = []
+
+    # Filter by Company
     company = request.args.get("company")
     if company:
         filters.append(Problem.company == company)
 
+    # Filter by Difficulty
     difficulty = request.args.get("difficulty")
     if difficulty:
         try:
             filters.append(Problem.difficulty == DifficultyEnum(difficulty).value)
         except ValueError:
-            # The user provided an invalid difficulty; skip or handle error
             raise InvalidUsage("Invalid difficulty value for filter")
 
+    # Filter by Title Search
     search = request.args.get("search")
     if search:
-        # ilike for case-insensitive search
         filters.append(Problem.title.ilike(f"%{search}%"))
 
+    # Filter by Data Structure
     data_structure = request.args.get("data_structure")
     if data_structure:
-        # Use the JSONB contains operator. This checks if the JSON array contains the value.
+        # For a JSONB column containing an array of data structures
         filters.append(Problem.data_structures.contains([data_structure]))
+
+    # Filter by Algorithm
+    algorithm = request.args.get("algorithm")
+    if algorithm:
+        # For a JSONB column containing an array of algorithms
+        filters.append(Problem.algorithms.contains([algorithm]))
+
+    # Filter by Tags (multiple)
+    tag = request.args.get("tag")  # returns a list of all 'tags' params
+    if tag:
+        filters.append(Problem.tags.contains([tag]))
 
     return filters
 
@@ -44,7 +56,7 @@ async def list_facets(request):
     session = request.ctx.session
     filters = build_filters(request)
 
-    # Company facet: group by company and count matching records
+    # --- 1. Company Facets ---
     company_stmt = (
         select(Problem.company, func.count(Problem.id).label("cnt"))
         .where(*filters)
@@ -57,7 +69,7 @@ async def list_facets(request):
         if row.company
     ]
 
-    # Difficulty facet: group by difficulty
+    # --- 2. Difficulty Facets ---
     difficulty_stmt = (
         select(Problem.difficulty, func.count(Problem.id).label("cnt"))
         .where(*filters)
@@ -74,25 +86,57 @@ async def list_facets(request):
     ORDER_MAP = {"Easy": 0, "Medium": 1, "Hard": 2}
     difficulty_facets.sort(key=lambda item: ORDER_MAP.get(item["value"], 999))
 
-    # Data structures facet: fetch all matching rows and aggregate counts from JSONB list
+    # --- 3. Data Structures Facets (JSONB array) ---
     ds_stmt = select(Problem.data_structures).where(*filters)
     result = await session.execute(ds_stmt)
     ds_count = {}
     for row in result.fetchall():
-        ds_field = row[0]  # data_structures column
-        if ds_field and isinstance(ds_field, list):
-            for ds in ds_field:
+        ds_list = row[0]  # data_structures column
+        if ds_list and isinstance(ds_list, list):
+            for ds in ds_list:
                 ds_count[ds] = ds_count.get(ds, 0) + 1
+
     data_structures_facets = [
         {"value": ds, "count": count} for ds, count in ds_count.items()
     ]
     data_structures_facets.sort(key=lambda x: x["count"], reverse=True)
 
+    # --- 4. Algorithms Facets (JSONB array) ---
+    alg_stmt = select(Problem.algorithms).where(*filters)
+    result = await session.execute(alg_stmt)
+    alg_count = {}
+    for row in result.fetchall():
+        alg_list = row[0]  # algorithms column
+        if alg_list and isinstance(alg_list, list):
+            for alg in alg_list:
+                alg_count[alg] = alg_count.get(alg, 0) + 1
+
+    algorithms_facets = [
+        {"value": alg, "count": count} for alg, count in alg_count.items()
+    ]
+    algorithms_facets.sort(key=lambda x: x["count"], reverse=True)
+
+    # --- 5. Tags Facets (JSONB array) ---
+    tags_stmt = select(Problem.tags).where(*filters)
+    result = await session.execute(tags_stmt)
+    tags_count = {}
+    for row in result.fetchall():
+        tags_list = row[0]  # tags column
+        if tags_list and isinstance(tags_list, list):
+            for tag in tags_list:
+                tags_count[tag] = tags_count.get(tag, 0) + 1
+
+    tags_facets = [{"value": tag, "count": count} for tag, count in tags_count.items()]
+    tags_facets.sort(key=lambda x: x["count"], reverse=True)
+
+    # --- Return All Facets ---
     return json(
         {
             "company": company_facets,
             "difficulty": difficulty_facets,
             "data_structures": data_structures_facets,
+            "algorithms": algorithms_facets,
+            "tags": tags_facets,
         }
     )
 
