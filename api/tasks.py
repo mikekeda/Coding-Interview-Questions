@@ -237,7 +237,7 @@ def get_new_problems():
                 exists().where(Problem.problem == cleaned_problem_text)
             ).scalar()
             if existing_problem:
-                logging.info(f"Saw existing problem {problem_id}. Skipping.")
+                logging.debug(f"Saw existing problem {problem_id}. Skipping.")
                 continue
 
             result = classify_problem(client, problem_text)
