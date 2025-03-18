@@ -8,7 +8,7 @@ from email.header import decode_header
 
 from openai import OpenAI
 from pydantic import BaseModel
-from sqlalchemy import create_engine, exists
+from sqlalchemy import create_engine, exists, func, literal
 from sqlalchemy.orm import sessionmaker
 
 from api.celery_app import app
@@ -234,7 +234,12 @@ def get_new_problems():
             cleaned_problem_text = problem_text.split("\n", 1)[1].strip()
 
             existing_problem = session.query(
-                exists().where(Problem.problem == cleaned_problem_text)
+                exists().where(
+                    func.regexp_replace(Problem.problem, r"\s+", " ", "g")
+                    == func.regexp_replace(
+                        literal(cleaned_problem_text), r"\s+", " ", "g"
+                    )
+                )
             ).scalar()
             if existing_problem:
                 logging.debug(f"Saw existing problem {problem_id}. Skipping.")
