@@ -42,6 +42,7 @@ SANIC_CONFIG = {
 EMAIL = get_env_var("EMAIL")
 EMAIL_PASSWORD = get_env_var("EMAIL_PASSWORD")
 OPENAI_API_KEY = get_env_var("OPENAI_API_KEY")
+OPENAI_MODEL = "gpt-5.4-mini"  # "gpt-4.1-mini"
 
 # CELERY STUFF
 CELERY_BROKER_URL = "redis://localhost:6379/10"

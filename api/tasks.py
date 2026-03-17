@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from api.celery_app import app
 from api.models import Problem, DifficultyEnum
-from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY, SANIC_CONFIG
+from api.settings import EMAIL, EMAIL_PASSWORD, OPENAI_API_KEY, OPENAI_MODEL, SANIC_CONFIG
 
 engine = create_engine(
     f"postgresql://{ SANIC_CONFIG['DB_USER'] }:{ SANIC_CONFIG['DB_PASSWORD'] }"
@@ -136,7 +136,7 @@ def classify_problem(client: OpenAI, problem: str) -> ProblemSchema:
     # usage is here: https://platform.openai.com/settings/organization/usage
     # price: https://openai.com/api/pricing/
     completion = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": problem},
