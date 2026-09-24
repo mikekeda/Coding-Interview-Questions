@@ -2,7 +2,7 @@ aiosqlite==0.22.1
 asyncpg==0.31.0
 celery==5.6.3
 greenlet==3.5.6
-openai==3.16.2
+openai==3.19.2
 pydantic==2.13.5
 psycopg2-binary==2.9.13
 redis==8.1.0
