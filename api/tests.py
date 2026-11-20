@@ -104,9 +104,7 @@ async def test_list_problems_with_filters():
     Test GET /api/problems with query params.
     For example: ?company=Google&difficulty=Easy
     """
-    request, response = await sanic_app.asgi_client.get(
-        "/api/problems?company=Google&difficulty=Easy"
-    )
+    request, response = await sanic_app.asgi_client.get("/api/problems?company=Google&difficulty=Easy")
     assert response.status_code == 200
     data = response.json
     assert "problems" in data
@@ -154,9 +152,7 @@ async def test_facets_no_filters():
     assert "data_structures" in data
 
     # Verify that the facet for Google exists and has a count of 1 (from problem2)
-    google_facet = next(
-        (item for item in data["company"] if item["value"] == "Google"), None
-    )
+    google_facet = next((item for item in data["company"] if item["value"] == "Google"), None)
     assert google_facet is not None
     assert google_facet["count"] == 1
 
@@ -174,9 +170,7 @@ async def test_facets_with_filters():
     assert "difficulty" in data
     assert "data_structures" in data
 
-    easy_facet = next(
-        (item for item in data["difficulty"] if item["value"] == "Easy"), None
-    )
+    easy_facet = next((item for item in data["difficulty"] if item["value"] == "Easy"), None)
     assert easy_facet is not None
     assert easy_facet["count"] == 1
 

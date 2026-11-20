@@ -58,29 +58,17 @@ async def list_facets(request):
 
     # --- 1. Company Facets ---
     company_stmt = (
-        select(Problem.company, func.count(Problem.id).label("cnt"))
-        .where(*filters)
-        .group_by(Problem.company)
+        select(Problem.company, func.count(Problem.id).label("cnt")).where(*filters).group_by(Problem.company)
     )
     result = await session.execute(company_stmt)
-    company_facets = [
-        {"value": row.company, "count": row.cnt}
-        for row in result.fetchall()
-        if row.company
-    ]
+    company_facets = [{"value": row.company, "count": row.cnt} for row in result.fetchall() if row.company]
 
     # --- 2. Difficulty Facets ---
     difficulty_stmt = (
-        select(Problem.difficulty, func.count(Problem.id).label("cnt"))
-        .where(*filters)
-        .group_by(Problem.difficulty)
+        select(Problem.difficulty, func.count(Problem.id).label("cnt")).where(*filters).group_by(Problem.difficulty)
     )
     result = await session.execute(difficulty_stmt)
-    difficulty_facets = [
-        {"value": row.difficulty, "count": row.cnt}
-        for row in result.fetchall()
-        if row.difficulty
-    ]
+    difficulty_facets = [{"value": row.difficulty, "count": row.cnt} for row in result.fetchall() if row.difficulty]
 
     # Sort difficulties in order: Easy, Medium, Hard
     ORDER_MAP = {"Easy": 0, "Medium": 1, "Hard": 2}
@@ -96,9 +84,7 @@ async def list_facets(request):
             for ds in ds_list:
                 ds_count[ds] = ds_count.get(ds, 0) + 1
 
-    data_structures_facets = [
-        {"value": ds, "count": count} for ds, count in ds_count.items()
-    ]
+    data_structures_facets = [{"value": ds, "count": count} for ds, count in ds_count.items()]
     data_structures_facets.sort(key=lambda x: x["count"], reverse=True)
 
     # --- 4. Algorithms Facets (JSONB array) ---
@@ -111,9 +97,7 @@ async def list_facets(request):
             for alg in alg_list:
                 alg_count[alg] = alg_count.get(alg, 0) + 1
 
-    algorithms_facets = [
-        {"value": alg, "count": count} for alg, count in alg_count.items()
-    ]
+    algorithms_facets = [{"value": alg, "count": count} for alg, count in alg_count.items()]
     algorithms_facets.sort(key=lambda x: x["count"], reverse=True)
 
     # --- 5. Tags Facets (JSONB array) ---
@@ -192,8 +176,7 @@ async def sitemap_xml(request):
     ids = [row[0] for row in result.fetchall()]
 
     # Basic static pages
-    url_entries = [
-        f"""
+    url_entries = [f"""
         <url>
             <loc>{request.app.config.DOMAIN}/</loc>
             <priority>1.0</priority>
@@ -202,17 +185,14 @@ async def sitemap_xml(request):
             <loc>{request.app.config.DOMAIN}/about</loc>
             <priority>0.8</priority>
         </url>
-        """
-    ]
+        """]
     for problem_id in ids:
-        url_entries.append(
-            f"""
+        url_entries.append(f"""
         <url>
             <loc>{request.app.config.DOMAIN}/problems/{problem_id}</loc>
             <priority>0.8</priority>
         </url>
-        """
-        )
+        """)
     sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {''.join(url_entries)}

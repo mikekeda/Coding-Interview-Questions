@@ -55,9 +55,7 @@ async def close_db(_app, loop):
 
 
 @app.exception(Exception)
-async def exception_handler(
-    _request: Request, exception: Exception, **__
-) -> response.HTTPResponse:
+async def exception_handler(_request: Request, exception: Exception, **__) -> response.HTTPResponse:
     """Exception handler returns error in json format."""
     status_code = getattr(exception, "status_code", 500)
     error = " ".join(str(arg) for arg in exception.args)

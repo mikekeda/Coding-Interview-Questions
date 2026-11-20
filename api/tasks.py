@@ -123,9 +123,7 @@ class ProblemSchema(BaseModel):
                 ],
                 "solution": "Use two pointers to locate the nth node from the end.",
                 "code_solution": "def removeNthFromEnd(head, n): ...",
-                "test_cases": [
-                    {"input": "[1, 2, 3, 4, 5], 2", "output": "[1, 2, 3, 5]"}
-                ],
+                "test_cases": [{"input": "[1, 2, 3, 4, 5], 2", "output": "[1, 2, 3, 5]"}],
             }
         }
 
@@ -186,9 +184,7 @@ def get_problems():
     _, msgnums = imap.search(None, 'SUBJECT "Daily Coding Problem: Problem #"')
     msgnums = msgnums[0].decode("utf-8").split()
     msgnums.reverse()  # process older messages first
-    logging.debug(
-        f"Found {len(msgnums)} problems in mail with subject 'Daily Coding Problem'."
-    )
+    logging.debug(f"Found {len(msgnums)} problems in mail with subject 'Daily Coding Problem'.")
 
     for num in msgnums:
         res, msg_data = imap.fetch(str(num), "(RFC822)")
@@ -236,9 +232,7 @@ def get_new_problems():
             existing_problem = session.query(
                 exists().where(
                     func.regexp_replace(Problem.problem, r"\s+", " ", "g")
-                    == func.regexp_replace(
-                        literal(cleaned_problem_text), r"\s+", " ", "g"
-                    )
+                    == func.regexp_replace(literal(cleaned_problem_text), r"\s+", " ", "g")
                 )
             ).scalar()
             if existing_problem:
@@ -255,9 +249,7 @@ def get_new_problems():
             session.add(Problem(**result))
             session.commit()
 
-            logging.info(
-                f"Inserted problem {problem_id}. {result['title']} into the database."
-            )
+            logging.info(f"Inserted problem {problem_id}. {result['title']} into the database.")
             problems_added += 1
 
     logging.info(f"Added {problems_added} new problems.")
